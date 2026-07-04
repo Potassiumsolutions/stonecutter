@@ -76,6 +76,10 @@ h1{font-size:42px;letter-spacing:1px}
 .mcell.newb{animation:bpop .3s both}
 @keyframes bpop{from{transform:scale(0)}60%{transform:scale(1.35)}to{transform:scale(1)}}
 .mon-banner{background:#EFE3C2;border-radius:12px;padding:12px;text-align:center;font-weight:600;margin-bottom:10px;font-size:16px}
+.setrow{display:flex;justify-content:space-between;align-items:center;background:#F6EEDC;border-radius:12px;padding:14px 16px;margin-bottom:10px;font-size:16px}
+.tgl{border:2px solid #C9B583;background:#FBF6E7;border-radius:20px;padding:6px 18px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;color:#7A6B4F}
+.tgl.on{background:#177E74;border-color:#177E74;color:#F6EEDC}
+input[type=range]{flex:1;margin-left:16px;accent-color:#177E74}
 </style>
 </head>
 <body>
@@ -93,8 +97,20 @@ h1{font-size:42px;letter-spacing:1px}
   <button class="btn" id="btn-play">Play</button>
   <button class="btn ghost" id="btn-mon">&#129521; Monument</button>
   <button class="btn ghost" id="btn-how">How to play</button>
-  <button class="btn ghost" id="btn-sound">Sound: on</button>
-  <button class="btn ghost small" id="btn-reset" style="margin-top:auto">Erase progress</button>
+  <button class="btn ghost" id="btn-set">&#9881; Settings</button>
+</div>
+
+<div id="scr-set" class="screen hidden">
+  <div class="topbar">
+    <button id="btn-set-back">&#8249;</button>
+    <span><b>Settings</b></span>
+    <span></span>
+  </div>
+  <div class="setrow"><span>Background sound</span><button class="tgl" id="tgl-music"></button></div>
+  <div class="setrow"><span>Volume</span><input type="range" id="vol" min="0" max="100" step="5"></div>
+  <div class="setrow"><span>Button sounds</span><button class="tgl" id="tgl-sfx"></button></div>
+  <button class="btn ghost small" id="btn-reset">Erase progress</button>
+  <button class="btn" id="btn-exit" style="margin-top:auto">Exit game</button>
 </div>
 
 <div id="scr-game" class="screen hidden">
@@ -131,7 +147,8 @@ h1{font-size:42px;letter-spacing:1px}
 <script>
 const $=id=>document.getElementById(id);
 const LS='stonecutter-v1';
-let S=Object.assign({round:1,coins:0,sound:true,mon:0,monBlocks:0,gild:0},JSON.parse(localStorage.getItem(LS)||'{}'));
+let S=Object.assign({round:1,coins:0,sfx:true,music:true,musicVol:0.4,mon:0,monBlocks:0,gild:0},JSON.parse(localStorage.getItem(LS)||'{}'));
+if('sound' in S){S.sfx=S.sound;S.music=S.sound;delete S.sound;}
 function save(){localStorage.setItem(LS,JSON.stringify(S));}
 function rand(a,b){return a+Math.floor(Math.random()*(b-a+1));}
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
@@ -142,8 +159,11 @@ const NAMES=["Nefer","Khay","Amara","Tia","Ramose","Iset","Hori","Meri","Seti","
 const RANKS=["","Apprentice","Carver","Scribe","Master"];
 function tierFor(r){return r<=4?1:r<=10?2:r<=18?3:4;}
 
+const bg=new Audio('background.mp3');bg.loop=true;
+function applyMusic(){bg.volume=S.musicVol;if(S.music)bg.play().catch(()=>{});else bg.pause();}
+document.addEventListener('pointerdown',function f(){document.removeEventListener('pointerdown',f);applyMusic();});
 let AC=null;
-function tone(f,dur,type,vol,delay){if(!S.sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const t=AC.currentTime+(delay||0);const o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.value=f;g.gain.setValueAtTime(vol||0.12,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+dur);}catch(e){}}
+function tone(f,dur,type,vol,delay){if(!S.sfx)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const t=AC.currentTime+(delay||0);const o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.value=f;g.gain.setValueAtTime(vol||0.12,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+dur);}catch(e){}}
 const snd={
  tap:()=>tone(600,0.06,'square',0.05),
  sel:n=>tone(300+n*40,0.1,'sine',0.1),
@@ -359,12 +379,11 @@ function nextRound(){hideOverlay();newRound();}
 function setOverlay(h){$('overlay').innerHTML=h;$('overlay').classList.remove('hidden');}
 function hideOverlay(){$('overlay').classList.add('hidden');$('overlay').innerHTML='';}
 
-function show(n){['home','game','mon'].forEach(x=>$('scr-'+x).classList.toggle('hidden',x!==n));}
+function show(n){['home','game','mon','set'].forEach(x=>$('scr-'+x).classList.toggle('hidden',x!==n));}
 function renderHome(){
  $('h-day').textContent='Day '+S.round;
  $('h-coins').textContent=S.coins;
  $('h-rank').textContent=RANKS[tierFor(S.round)];
- $('btn-sound').textContent='Sound: '+(S.sound?'on':'off');
  $('btn-mon').innerHTML='\u{1F9F1} '+MONS[S.mon].n+' — '+S.monBlocks+' / '+monCells(MONS[S.mon].g).length;
 }
 
@@ -373,8 +392,24 @@ $('btn-mon').onclick=()=>{snd.tap();showMon('home');};
 $('btn-mon-go').onclick=()=>{snd.tap();monDone();};
 $('btn-mon-back').onclick=()=>{snd.tap();monDone();};
 $('btn-back').onclick=()=>{clearInterval(timerInt);hideOverlay();show('home');renderHome();};
-$('btn-sound').onclick=()=>{S.sound=!S.sound;save();renderHome();snd.tap();};
-$('btn-reset').onclick=()=>{if(confirm('Erase all progress?')){S={round:1,coins:0,sound:S.sound};save();renderHome();}};
+function renderSet(){
+ $('tgl-music').textContent=S.music?'On':'Off';
+ $('tgl-music').classList.toggle('on',S.music);
+ $('tgl-sfx').textContent=S.sfx?'On':'Off';
+ $('tgl-sfx').classList.toggle('on',S.sfx);
+ $('vol').value=Math.round(S.musicVol*100);
+}
+$('btn-set').onclick=()=>{snd.tap();renderSet();show('set');};
+$('btn-set-back').onclick=()=>{snd.tap();show('home');renderHome();};
+$('tgl-music').onclick=()=>{S.music=!S.music;save();applyMusic();renderSet();snd.tap();};
+$('tgl-sfx').onclick=()=>{S.sfx=!S.sfx;save();renderSet();snd.tap();};
+$('vol').oninput=()=>{S.musicVol=$('vol').value/100;save();bg.volume=S.musicVol;};
+$('btn-exit').onclick=()=>{
+ bg.pause();
+ window.close();
+ setTimeout(()=>{setOverlay('<div class="ovl"><h2>Rest well, stonecutter</h2><p class="sub">You can close the app now. Your pyramid will be waiting.</p><button class="btn" onclick="hideOverlay();applyMusic()">Keep playing</button></div>');},250);
+};
+$('btn-reset').onclick=()=>{if(confirm('Erase all progress?')){S={round:1,coins:0,sfx:S.sfx,music:S.music,musicVol:S.musicVol,mon:0,monBlocks:0,gild:0};save();show('home');renderHome();}};
 $('btn-how').onclick=()=>{
  setOverlay('<div class="ovl"><h2>How to play</h2><ol><li>A customer orders, like 13 baskets &times; 12 fish.</li><li>Carve stones. Each new stone doubles the last one &mdash; doubling is just adding a number to itself.</li><li>Tap stones so the baskets add up to exactly 13.</li><li>The fish on those stones add up to the answer.</li><li>Every order earns &#129521; blocks that build the wonders of Egypt.</li></ol><p class="sub" style="margin-top:10px">Every number can be built from doubles. Scribes in Egypt multiplied this way 4,000 years ago &mdash; and now you can too.</p><button class="btn" onclick="hideOverlay()">Got it</button></div>');
 };

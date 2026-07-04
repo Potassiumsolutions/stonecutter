@@ -1,5 +1,5 @@
-const C = 'stonecutter-v2';
-const A = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png'];
+const C = 'stonecutter-v3';
+const A = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'background.mp3'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(A)).then(() => self.skipWaiting()));
 });
