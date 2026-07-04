@@ -68,6 +68,14 @@ h1{font-size:42px;letter-spacing:1px}
 .ovl .coins{font-size:19px;font-weight:700;color:#B98A2F;margin-top:10px}
 .ovl .rankup{background:#EFE3C2;border-radius:12px;padding:10px;margin-top:12px;font-size:15px}
 .ovl ol{text-align:left;margin:10px 0 0 20px;font-size:15px;line-height:1.6}
+.mrow{display:flex;gap:2px;justify-content:center}
+.mcell{border-radius:2px;box-sizing:border-box}
+.mcell.on{background:#D8B56A;border:1px solid #B98A2F}
+.mcell.off{border:1px dashed #C9B583;opacity:.45}
+.gold .mcell.on{background:#F2C94C;border-color:#B8860B}
+.mcell.newb{animation:bpop .3s both}
+@keyframes bpop{from{transform:scale(0)}60%{transform:scale(1.35)}to{transform:scale(1)}}
+.mon-banner{background:#EFE3C2;border-radius:12px;padding:12px;text-align:center;font-weight:600;margin-bottom:10px;font-size:16px}
 </style>
 </head>
 <body>
@@ -83,6 +91,7 @@ h1{font-size:42px;letter-spacing:1px}
     <div class="stat"><div class="v" id="h-rank">Apprentice</div><div class="l">rank</div></div>
   </div>
   <button class="btn" id="btn-play">Play</button>
+  <button class="btn ghost" id="btn-mon">&#129521; Monument</button>
   <button class="btn ghost" id="btn-how">How to play</button>
   <button class="btn ghost" id="btn-sound">Sound: on</button>
   <button class="btn ghost small" id="btn-reset" style="margin-top:auto">Erase progress</button>
@@ -106,12 +115,23 @@ h1{font-size:42px;letter-spacing:1px}
   <div class="tracker" id="tracker"></div>
 </div>
 
+<div id="scr-mon" class="screen hidden">
+  <div class="topbar">
+    <button id="btn-mon-back">&#8249;</button>
+    <span><b id="mon-name"></b></span>
+    <span id="mon-count"></span>
+  </div>
+  <div id="mon-banner" class="hidden"></div>
+  <div id="mon-grid" style="margin:auto 0;display:flex;flex-direction:column;gap:2px"></div>
+  <button class="btn" id="btn-mon-go">Back</button>
+</div>
+
 </div>
 <div id="overlay" class="hidden"></div>
 <script>
 const $=id=>document.getElementById(id);
 const LS='stonecutter-v1';
-let S=Object.assign({round:1,coins:0,sound:true},JSON.parse(localStorage.getItem(LS)||'{}'));
+let S=Object.assign({round:1,coins:0,sound:true,mon:0,monBlocks:0,gild:0},JSON.parse(localStorage.getItem(LS)||'{}'));
 function save(){localStorage.setItem(LS,JSON.stringify(S));}
 function rand(a,b){return a+Math.floor(Math.random()*(b-a+1));}
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
@@ -133,6 +153,59 @@ const snd={
  rank:()=>{[392,523,659,784,1047].forEach((f,i)=>tone(f,0.25,'triangle',0.12,i*0.15));}
 };
 
+function pyrGrid(){const rows=[];for(let r=0;r<9;r++){const n=2*r+1,off=(17-n)/2;rows.push('.'.repeat(off)+'#'.repeat(n)+'.'.repeat(off));}return rows;}
+const MONS=[
+ {n:'The Great Pyramid',g:pyrGrid()},
+ {n:'The Great Sphinx',g:[
+  '..##................',
+  '.####...............',
+  '.####...............',
+  '..##................',
+  '..##......#######...',
+  '..###...##########..',
+  '..#################.',
+  '..#################.',
+  '.##################.',
+  '####################',
+  '####################']},
+ {n:'The Golden Obelisk',g:[
+  '...#...',
+  '..###..','..###..','..###..','..###..','..###..','..###..','..###..','..###..','..###..','..###..',
+  '.#####.',
+  '#######']}
+];
+function monCells(g){const out=[];for(let r=g.length-1;r>=0;r--)for(let c=0;c<g[r].length;c++)if(g[r][c]==='#')out.push([r,c]);return out;}
+let PA=null,monMode='home';
+function showMon(mode){
+ monMode=mode;
+ const data=PA||{mi:S.mon,prev:S.monBlocks,placed:S.monBlocks,completed:false};
+ PA=null;
+ const M=MONS[data.mi],cells=monCells(M.g),total=cells.length,cols=M.g[0].length;
+ $('mon-name').textContent=M.n+(S.gild>0?' ✨':'');
+ $('mon-count').textContent=Math.min(data.placed,total)+' / '+total+' \u{1F9F1}';
+ const px=Math.max(8,Math.min(22,Math.floor((Math.min(window.innerWidth,480)-32-2*(cols-1))/cols)));
+ const idx={};cells.forEach((rc,i)=>idx[rc[0]+'_'+rc[1]]=i);
+ const grid=$('mon-grid');
+ grid.classList.toggle('gold',S.gild>0);
+ grid.innerHTML=M.g.map((row,r)=>'<div class="mrow">'+[...row].map((ch,c)=>{
+  const sz='width:'+px+'px;height:'+px+'px;flex:none';
+  if(ch!=='#')return '<span style="'+sz+'"></span>';
+  const i=idx[r+'_'+c],on=i<data.placed,isNew=on&&i>=data.prev;
+  return '<span class="mcell '+(on?'on':'off')+(isNew?' newb':'')+'" style="'+sz+(isNew?';animation-delay:'+((i-data.prev)*0.15).toFixed(2)+'s':'')+'"></span>';
+ }).join('')+'</div>').join('');
+ const nb=data.placed-data.prev;
+ for(let i=0;i<nb;i++)tone(150+i*20,0.09,'square',0.12,0.15*i+0.15);
+ const bn=$('mon-banner');
+ if(data.completed){
+  bn.className='mon-banner';
+  bn.innerHTML='⭐ '+M.n+' is complete!'+(data.mi===MONS.length-1?' A golden age begins…':' Next: '+MONS[S.mon].n);
+  setTimeout(snd.rank,nb*150+300);
+ }else bn.className='hidden';
+ $('btn-mon-go').textContent=mode==='play'?'Next order':'Back';
+ show('mon');
+}
+function monDone(){if(monMode==='play')newRound();else{show('home');renderHome();}}
+function toMon(){hideOverlay();showMon('play');}
 let G=null,timerInt=null;
 
 function newRound(){
@@ -259,7 +332,12 @@ function win(V){
  const perfect=G.cracks===0;
  const earned=10+G.m+(perfect?15:G.cracks===1?8:G.cracks===2?3:0)+(G.boss?25:0);
  const oldT=tierFor(S.round);
- S.coins+=earned;S.round++;save();
+ S.coins+=earned;S.round++;
+ const eb=2+(perfect?1:0)+(G.boss?2:0);
+ const mi=S.mon,prev=S.monBlocks,total=monCells(MONS[mi].g).length;
+ if(prev+eb>=total){PA={mi,prev,placed:total,completed:true};S.mon=(mi+1)%MONS.length;if(S.mon===0)S.gild++;S.monBlocks=prev+eb-total;}
+ else{PA={mi,prev,placed:prev+eb,completed:false};S.monBlocks=prev+eb;}
+ save();
  const newT=tierFor(S.round);
  snd.win();if(newT>oldT)setTimeout(snd.rank,600);
  const vals=G.rows.filter(r=>r.s).map(r=>r.v);
@@ -268,11 +346,12 @@ function win(V){
  html+='<p class="eq2">'+G.m+' × '+G.b+' = '+V+'</p>';
  html+='<p class="sub">No times tables. Just doubling and adding.</p>';
  html+='<p class="coins">+'+earned+' coins'+(perfect?' • perfect carve':'')+(G.boss?' • royal bonus':'')+'</p>';
+ html+='<p class="sub" style="margin-top:4px">\u{1F9F1} +'+eb+' blocks for '+MONS[mi].n+'</p>';
  if(newT>oldT){
   const msg={2:'Now you carve the doubles yourself.',3:'No more choices — carve doubles on the keypad.',4:'Now you do the final adding too. The full secret is yours.'}[newT];
   html+='<div class="rankup">&#11088; Rank up! You are now a <b>'+RANKS[newT]+'</b>.<br>'+msg+'</div>';
  }
- html+='<button class="btn" onclick="nextRound()">Next order</button></div>';
+ html+='<button class="btn" onclick="toMon()">Place your blocks</button></div>';
  renderTop();setOverlay(html);
 }
 function nextRound(){hideOverlay();newRound();}
@@ -280,20 +359,24 @@ function nextRound(){hideOverlay();newRound();}
 function setOverlay(h){$('overlay').innerHTML=h;$('overlay').classList.remove('hidden');}
 function hideOverlay(){$('overlay').classList.add('hidden');$('overlay').innerHTML='';}
 
-function show(n){['home','game'].forEach(x=>$('scr-'+x).classList.toggle('hidden',x!==n));}
+function show(n){['home','game','mon'].forEach(x=>$('scr-'+x).classList.toggle('hidden',x!==n));}
 function renderHome(){
  $('h-day').textContent='Day '+S.round;
  $('h-coins').textContent=S.coins;
  $('h-rank').textContent=RANKS[tierFor(S.round)];
  $('btn-sound').textContent='Sound: '+(S.sound?'on':'off');
+ $('btn-mon').innerHTML='\u{1F9F1} '+MONS[S.mon].n+' — '+S.monBlocks+' / '+monCells(MONS[S.mon].g).length;
 }
 
 $('btn-play').onclick=()=>{snd.tap();newRound();};
+$('btn-mon').onclick=()=>{snd.tap();showMon('home');};
+$('btn-mon-go').onclick=()=>{snd.tap();monDone();};
+$('btn-mon-back').onclick=()=>{snd.tap();monDone();};
 $('btn-back').onclick=()=>{clearInterval(timerInt);hideOverlay();show('home');renderHome();};
 $('btn-sound').onclick=()=>{S.sound=!S.sound;save();renderHome();snd.tap();};
 $('btn-reset').onclick=()=>{if(confirm('Erase all progress?')){S={round:1,coins:0,sound:S.sound};save();renderHome();}};
 $('btn-how').onclick=()=>{
- setOverlay('<div class="ovl"><h2>How to play</h2><ol><li>A customer orders, like 13 baskets &times; 12 fish.</li><li>Carve stones. Each new stone doubles the last one &mdash; doubling is just adding a number to itself.</li><li>Tap stones so the baskets add up to exactly 13.</li><li>The fish on those stones add up to the answer.</li></ol><p class="sub" style="margin-top:10px">Every number can be built from doubles. Scribes in Egypt multiplied this way 4,000 years ago &mdash; and now you can too.</p><button class="btn" onclick="hideOverlay()">Got it</button></div>');
+ setOverlay('<div class="ovl"><h2>How to play</h2><ol><li>A customer orders, like 13 baskets &times; 12 fish.</li><li>Carve stones. Each new stone doubles the last one &mdash; doubling is just adding a number to itself.</li><li>Tap stones so the baskets add up to exactly 13.</li><li>The fish on those stones add up to the answer.</li><li>Every order earns &#129521; blocks that build the wonders of Egypt.</li></ol><p class="sub" style="margin-top:10px">Every number can be built from doubles. Scribes in Egypt multiplied this way 4,000 years ago &mdash; and now you can too.</p><button class="btn" onclick="hideOverlay()">Got it</button></div>');
 };
 
 renderHome();show('home');
