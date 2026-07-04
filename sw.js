@@ -1,5 +1,6 @@
-const C = 'stonecutter-v3';
-const A = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'background.mp3'];
+const C = 'stonecutter-v4';
+const A = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'background.mp3',
+  'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(A)).then(() => self.skipWaiting()));
 });
