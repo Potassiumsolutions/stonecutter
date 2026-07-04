@@ -43,7 +43,8 @@ h1{font-size:42px;letter-spacing:1px}
 @keyframes pop{from{transform:scale(.9);opacity:0}}
 @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 .shake{animation:shake .18s 2}
-.qcard{background:#F6EEDC;border-radius:14px;padding:14px;margin-bottom:12px}
+.qcard{background:#F6EEDC;border-radius:14px;padding:14px;margin-bottom:12px;position:relative}
+.qclose{position:absolute;top:6px;right:6px;background:none;border:none;font-size:16px;color:#7A6B4F;cursor:pointer;padding:6px;line-height:1}
 .qcard .prompt{font-size:15px;color:#7A6B4F;text-align:center}
 .qcard .eq{font-size:26px;font-weight:700;text-align:center;margin:6px 0 10px}
 .choices{display:flex;gap:8px}
@@ -135,11 +136,11 @@ const snd={
 let G=null,timerInt=null;
 
 function newRound(){
- const r=S.round,t=tierFor(r),boss=r>=5&&r%5===0;
+ const r=S.round,t=tierFor(r),boss=r>=10&&r%5===0;
  const R={1:[5,13,3,9],2:[9,19,4,12],3:[13,27,6,15],4:[17,31,8,25]}[t];
  let m=rand(R[0],R[1]);if((m&(m-1))===0)m+=1;if(m>31)m=31;
  let b=rand(R[2],R[3]);if(boss)b+=3;
- G={m,b,t,boss,good:pick(GOODS),who:pick(NAMES),rows:[{p:1,v:b,s:false}],cracks:0,q:null,tally:null,time:boss?75:0,done:false};
+ G={m,b,t,boss,good:pick(GOODS),who:pick(NAMES),rows:[{p:1,v:b,s:false}],cracks:0,q:null,tally:null,time:boss?90:0,done:false};
  if(t===1){while(G.rows[G.rows.length-1].p*2<=m){const l=G.rows[G.rows.length-1];G.rows.push({p:l.p*2,v:l.v*2,s:false});}}
  clearInterval(timerInt);
  show('game');renderGame();
@@ -160,7 +161,9 @@ function renderTop(){
  $('coins').textContent=S.coins;
  const c=Math.min(3,G.cracks);
  $('cracks').textContent='●'.repeat(c)+'○'.repeat(3-c);
- $('timer').textContent=G.boss&&!G.done?'☀️ '+Math.max(0,G.time):'';
+ const tm=$('timer');
+ tm.textContent=G.boss&&!G.done?'⏳ '+Math.max(0,G.time):'';
+ tm.style.color=G.time<=15?'#A93B2A':'#B98A2F';
 }
 function renderOrder(){
  $('order-big').textContent=G.m+' × '+G.b+' '+G.good[1];
@@ -172,7 +175,7 @@ function renderStones(){
 function renderQ(){
  const w=$('qwrap');
  if(G.q){
-  let inner='<div class="qcard" id="qcard"><p class="prompt">'+(G.q.role==='tally'?'Add up your stones':'Double the last stone')+'</p><p class="eq">'+G.q.prompt+'</p>';
+  let inner='<div class="qcard" id="qcard">'+(G.q.role==='carve'?'<button class="qclose" onclick="cancelQ()" aria-label="Cancel">&#10005;</button>':'')+'<p class="prompt">'+(G.q.role==='tally'?'Add up your stones':'Double the last stone')+'</p><p class="eq">'+G.q.prompt+'</p>';
   if(G.q.type==='mc'){inner+='<div class="choices">'+G.q.opts.map(o=>'<button onclick="ans('+o+')">'+o+'</button>').join('')+'</div>';}
   else{inner+='<p class="entry" id="entry">&nbsp;</p><div class="kp">'+[1,2,3,4,5,6,7,8,9].map(d=>'<button onclick="kpAdd('+d+')">'+d+'</button>').join('')+'<button onclick="kpClr()">&#10005;</button><button onclick="kpAdd(0)">0</button><button onclick="kpOk()">&#10003;</button></div>';}
   inner+='<p class="qmsg" id="qmsg"></p></div>';
@@ -193,8 +196,10 @@ function renderTracker(){
  tr.textContent=P>G.m?P+' / '+G.m+' '+unit()+' — too many, drop a stone':'Gathered: '+P+' / '+G.m+' '+unit();
 }
 
+function cancelQ(){if(G.q&&G.q.role==='carve'){G.q=null;snd.tap();renderGame();}}
 function tog(i){
- if(G.done||G.tally||G.q)return;
+ if(G.done||G.tally)return;
+ if(G.q){const qc=$('qcard');if(qc){qc.classList.remove('shake');void qc.offsetWidth;qc.classList.add('shake');}return;}
  G.rows[i].s=!G.rows[i].s;
  const P=G.rows.reduce((a,r)=>a+(r.s?r.p:0),0);
  snd.sel(P);
