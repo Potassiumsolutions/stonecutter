@@ -102,6 +102,7 @@ input[type=range]{flex:1;margin-left:16px;accent-color:#177E74}
     <div class="stat"><div class="v" id="h-rank">Apprentice</div><div class="l">rank</div></div>
   </div>
   <button class="btn" id="btn-play">Play</button>
+  <button class="btn" id="btn-install" style="display:none;background:#177E74">&#128241; Install on this device</button>
   <button class="btn ghost" id="btn-mon">&#129521; Monument</button>
   <button class="btn ghost" id="btn-museum">&#127963;&#65039; Museum</button>
   <button class="btn ghost" id="btn-how">How to play</button>
@@ -632,6 +633,15 @@ $('btn-how').onclick=()=>{
  setOverlay('<div class="ovl"><h2>How to play</h2><ol><li>A customer orders, like 13 baskets &times; 12 fish.</li><li>Carve stones. Each new stone doubles the last one &mdash; doubling is just adding a number to itself.</li><li>Tap stones so the baskets add up to exactly 13.</li><li>The fish on those stones add up to the answer.</li><li>Rank up from Apprentice to Master &mdash; each rank puts more of the carving in your hands. Watch for royal orders against the setting sun!</li><li>Every order earns &#129521; blocks that build 17 wonders of the ancient world, from the Great Pyramid to the great temples of Mexico.</li><li>Finish a wonder to unlock its story in the &#127963;&#65039; Museum.</li></ol><p class="sub" style="margin-top:10px">Every number can be built from doubles. Scribes in Egypt multiplied this way 4,000 years ago &mdash; and now you can too.</p><button class="btn" onclick="hideOverlay()">Got it</button></div>');
 };
 
+let deferredPrompt=null;
+const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;if(!standalone)$('btn-install').style.display='block';});
+$('btn-install').onclick=async()=>{
+ snd.tap();
+ if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$('btn-install').style.display='none';}
+ else{setOverlay('<div class="ovl"><h2>Add to your home screen</h2><p class="sub">In your browser\'s menu (the &#8942; or &#8801; button, usually at the top or bottom), tap <b>Add to Home screen</b> or <b>Install app</b>. Then Stonecutter opens with one tap — no link needed.</p><p class="sub" style="margin-top:8px">If you don\'t see a menu, this page may be open inside another app. Open <b>Chrome</b> and go to potassiumsolutions.github.io/stonecutter</p><button class="btn" onclick="hideOverlay()">Got it</button></div>');}
+};
+window.addEventListener('appinstalled',()=>{deferredPrompt=null;$('btn-install').style.display='none';});
 renderHome();show('home');
 if(location.search.includes('tour')){
  save=()=>{};
