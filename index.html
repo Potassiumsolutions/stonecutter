@@ -76,6 +76,13 @@ h1{font-size:42px;letter-spacing:1px}
 .mcell.newb{animation:bpop .3s both}
 @keyframes bpop{from{transform:scale(0)}60%{transform:scale(1.35)}to{transform:scale(1)}}
 .mon-banner{background:#EFE3C2;border-radius:12px;padding:12px;text-align:center;font-weight:600;margin-bottom:10px;font-size:16px}
+.mus{background:#F6EEDC;border-radius:12px;padding:12px 14px;margin-bottom:8px}
+.mus .t{font-weight:700;font-size:16px}
+.mus .w{font-size:13px;color:#7A6B4F;margin-top:4px;line-height:1.45}
+.mus.cur{border:2px solid #B98A2F}
+.mus.lock{opacity:.55}
+.mus .bar{height:8px;background:#EADFC8;border-radius:4px;margin-top:8px;overflow:hidden}
+.mus .bar i{display:block;height:100%;background:#B98A2F;border-radius:4px}
 .setrow{display:flex;justify-content:space-between;align-items:center;background:#F6EEDC;border-radius:12px;padding:14px 16px;margin-bottom:10px;font-size:16px}
 .tgl{border:2px solid #C9B583;background:#FBF6E7;border-radius:20px;padding:6px 18px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;color:#7A6B4F}
 .tgl.on{background:#177E74;border-color:#177E74;color:#F6EEDC}
@@ -96,6 +103,7 @@ input[type=range]{flex:1;margin-left:16px;accent-color:#177E74}
   </div>
   <button class="btn" id="btn-play">Play</button>
   <button class="btn ghost" id="btn-mon">&#129521; Monument</button>
+  <button class="btn ghost" id="btn-museum">&#127963;&#65039; Museum</button>
   <button class="btn ghost" id="btn-how">How to play</button>
   <button class="btn ghost" id="btn-set">&#9881; Settings</button>
 </div>
@@ -140,6 +148,15 @@ input[type=range]{flex:1;margin-left:16px;accent-color:#177E74}
   <div id="mon-banner" class="hidden"></div>
   <div id="mon-grid" style="margin:auto 0;display:flex;flex-direction:column;gap:2px"></div>
   <button class="btn" id="btn-mon-go">Back</button>
+</div>
+
+<div id="scr-museum" class="screen hidden">
+  <div class="topbar">
+    <button id="btn-mus-back">&#8249;</button>
+    <span><b>Monument Museum</b></span>
+    <span id="mus-count"></span>
+  </div>
+  <div id="mus-list"></div>
 </div>
 
 </div>
@@ -188,13 +205,115 @@ function buildVoxels(){
  sx.sort((a,b)=>(a[1]-b[1])||(b[0]-a[0])||(a[2]-b[2]));
  const ob=[];vbox(ob,0,3,0,3,0,0);vbox(ob,1,2,1,2,1,9);
  ob.sort((a,b)=>(a[1]-b[1])||(a[2]-b[2])||(a[0]-b[0]));
- return [pyr,sx,ob];
+ function ringCells(r0,r1){
+  const c=[],R=Math.ceil(r1);
+  for(let x=-R;x<=R;x++)for(let z=-R;z<=R;z++){const d=Math.hypot(x,z);if(d>=r0&&d<=r1)c.push([x,z]);}
+  c.sort((a,b)=>Math.atan2(a[1],a[0])-Math.atan2(b[1],b[0]));
+  return c;
+ }
+ const sh=[];
+ ringCells(4.1,5.05).forEach((c,i)=>{if(i%2===0){sh.push([c[0],0,c[1]],[c[0],1,c[1]]);}sh.push([c[0],2,c[1]]);});
+ ringCells(6.6,7.45).forEach((c,i)=>{if(i%2===0)sh.push([c[0],0,c[1]]);});
+ const tri=(x,z,dx,dz)=>{vbox(sh,x,x,z,z,0,2);vbox(sh,x+2*dx,x+2*dx,z+2*dz,z+2*dz,0,2);sh.push([x,3,z],[x+dx,3,z+dz],[x+2*dx,3,z+2*dz]);};
+ tri(-2,-1,0,1);tri(2,-1,0,1);tri(-1,-2,1,0);
+ sh.push([0,0,0]);
+ const pa=[];
+ vbox(pa,0,6,0,4,0,0);
+ [0,2,4,6].forEach(x=>{vbox(pa,x,x,0,0,1,3);vbox(pa,x,x,4,4,1,3);});
+ vbox(pa,0,0,2,2,1,3);vbox(pa,6,6,2,2,1,3);
+ vbox(pa,0,6,0,0,4,4);vbox(pa,0,6,4,4,4,4);vbox(pa,0,0,1,3,4,4);vbox(pa,6,6,1,3,4,4);
+ vbox(pa,0,6,1,3,5,5);vbox(pa,0,6,2,2,6,6);
+ const lh=[];
+ vbox(lh,0,4,0,4,0,0);
+ vbox(lh,0,4,0,0,1,3);vbox(lh,0,4,4,4,1,3);vbox(lh,0,0,1,3,1,3);vbox(lh,4,4,1,3,1,3);
+ vbox(lh,1,3,1,3,4,6);
+ vbox(lh,2,2,2,2,7,8);
+ lh.push([2,9,2]);
+ const aq=[];
+ [0,3,6,9,12].forEach(x=>vbox(aq,x,x,0,1,0,2));
+ for(let x=0;x<=12;x++)if(x%3!==0)vbox(aq,x,x,0,1,2,2);
+ vbox(aq,0,12,0,1,3,3);
+ [0,2,4,6,8,10,12].forEach(x=>vbox(aq,x,x,0,1,4,4));
+ vbox(aq,0,12,0,1,5,5);
+ const co=[];
+ ringCells(4.1,5.05).forEach((c,i)=>{
+  if(c[1]<0){for(let y=0;y<=4;y++){if(y===1&&i%2===1)continue;if(y===3&&i%2===0)continue;co.push([c[0],y,c[1]]);}}
+  else{co.push([c[0],0,c[1]],[c[0],1,c[1]]);}
+ });
+ for(let x=-2;x<=2;x++)for(let z=-2;z<=2;z++)if(Math.hypot(x,z)<=2.5)co.push([x,0,z]);
+ const per=(a,x0,x1,z0,z1,y)=>{vbox(a,x0,x1,z0,z0,y,y);vbox(a,x0,x1,z1,z1,y,y);vbox(a,x0,x0,z0+1,z1-1,y,y);vbox(a,x1,x1,z0+1,z1-1,y,y);};
+ const gw=[];
+ vbox(gw,0,1,0,2,0,4);vbox(gw,11,12,0,2,0,4);
+ vbox(gw,2,10,0,1,0,1);
+ [3,5,7,9].forEach(x=>{gw.push([x,2,0],[x,2,1]);});
+ [[0,0],[0,2],[1,0],[1,2],[11,0],[11,2],[12,0],[12,2]].forEach(c=>gw.push([c[0],5,c[1]]));
+ const pg=[];
+ vbox(pg,1,3,1,3,0,1);vbox(pg,0,4,0,4,2,2);
+ vbox(pg,1,3,1,3,3,4);vbox(pg,0,4,0,4,5,5);
+ vbox(pg,1,3,1,3,6,7);vbox(pg,0,4,0,4,8,8);
+ vbox(pg,2,2,2,2,9,10);
+ const aw=[];
+ vbox(aw,0,8,0,8,0,0);
+ [[1,1],[1,7],[7,1],[7,7]].forEach(c=>vbox(aw,c[0],c[0],c[1],c[1],1,3));
+ vbox(aw,3,5,3,5,1,3);vbox(aw,4,4,4,4,4,5);
+ const ci=[];
+ for(let t=0;t<4;t++){per(ci,t,8-t,t,8-t,t);vbox(ci,3,5,t-1,t-1,t,t);}
+ per(ci,3,5,3,5,4);vbox(ci,3,5,3,5,5,5);
+ const tm=[];
+ per(tm,0,10,0,6,0);per(tm,1,9,1,5,1);per(tm,2,8,2,4,2);
+ vbox(tm,2,8,2,4,3,3);
+ vbox(tm,2,3,2,3,4,5);vbox(tm,7,8,2,3,4,5);
+ vbox(tm,3,4,-1,-1,0,0);vbox(tm,6,7,-1,-1,0,0);
+ vbox(tm,3,4,0,0,1,1);vbox(tm,6,7,0,0,1,1);
+ vbox(tm,3,4,1,1,2,2);vbox(tm,6,7,1,1,2,2);
+ const zg=[];
+ per(zg,0,8,0,5,0);vbox(zg,0,8,0,5,1,1);
+ per(zg,2,6,1,4,2);vbox(zg,2,6,1,4,3,3);
+ vbox(zg,3,5,2,3,4,5);
+ vbox(zg,3,5,-2,-1,0,0);vbox(zg,3,5,-1,-1,1,1);vbox(zg,3,5,0,0,2,2);vbox(zg,3,5,1,1,3,3);
+ const tj=[];
+ vbox(tj,0,6,0,6,0,0);
+ per(tj,1,5,1,5,1);per(tj,1,5,1,5,2);
+ vbox(tj,1,5,1,5,3,3);
+ vbox(tj,2,4,2,4,4,4);tj.push([3,5,3]);
+ [[0,0],[0,6],[6,0],[6,6]].forEach(c=>vbox(tj,c[0],c[0],c[1],c[1],1,4));
+ const mo=[];
+ vbox(mo,0,11,0,1,0,0);
+ [1,5,9].forEach(x=>{
+  vbox(mo,x,x+1,0,1,1,4);
+  vbox(mo,x,x+1,-1,-1,4,4);
+  vbox(mo,x,x+1,-1,-1,2,3);
+ });
+ const mp=[];
+ per(mp,0,9,0,6,0);per(mp,1,8,1,5,1);per(mp,2,7,2,4,2);
+ vbox(mp,2,7,2,4,3,3);
+ vbox(mp,3,4,3,3,4,4);mp.push([3,5,3]);
+ vbox(mp,6,7,3,3,4,4);mp.push([7,5,3]);
+ const srt=a=>a.sort((p,q)=>(p[1]-q[1])||(p[2]-q[2])||(p[0]-q[0]));
+ const uniq=a=>{const s=new Set();return a.filter(v=>{const k=v.join(',');if(s.has(k))return false;s.add(k);return true;});};
+ return [pyr,sx,ob,uniq(srt(sh)),uniq(srt(pa)),uniq(srt(lh)),uniq(srt(aq)),uniq(srt(co)),
+  uniq(srt(gw)),uniq(srt(pg)),uniq(srt(aw)),uniq(srt(ci)),uniq(srt(tm)),
+  uniq(srt(zg)),uniq(srt(tj)),uniq(srt(mo)),uniq(srt(mp))];
 }
 const VX=buildVoxels();
 const MONS=[
- {n:'The Great Pyramid',v:VX[0]},
- {n:'The Great Sphinx',v:VX[1]},
- {n:'The Golden Obelisk',v:VX[2]}
+ {n:'The Great Pyramid',v:VX[0],d:"Built about 4,500 years ago at Giza in Egypt as a tomb for the pharaoh Khufu. It took more than 2 million stone blocks, and it stood as the tallest building on Earth for almost 4,000 years."},
+ {n:'The Great Sphinx',v:VX[1],d:"A guardian with a lion's body and a pharaoh's head, carved at Giza from one single giant piece of limestone. It is longer than a basketball court and has watched over the pyramids for 4,500 years."},
+ {n:'The Golden Obelisk',v:VX[2],d:"Egyptian stonecutters carved each obelisk from a single block of granite, then stood it up to honor Ra, the sun god. The very tip was often coated in gold to catch the first ray of morning sunlight."},
+ {n:'The Ziggurat of Ur',v:VX[13],c:0xA97F52,d:"A temple mountain of mud bricks, built 4,100 years ago in Mesopotamia — the land where writing and arithmetic were invented. Priests climbed the grand staircase to a shrine at the very top."},
+ {n:'Stonehenge',v:VX[3],c:0x9A9A90,d:"A circle of giant stones raised in England about 5,000 years ago. Some stones weigh as much as five elephants, and the circle lines up perfectly with the sunrise on the longest day of the year."},
+ {n:'The Parthenon',v:VX[4],c:0xA5A092,d:"A marble temple for the goddess Athena, built 2,500 years ago on a hill above Athens in Greece. Its columns secretly lean and bulge just a little — clever math that makes the whole temple look perfectly straight."},
+ {n:'The Great Lighthouse',v:VX[5],c:0xCBB47E,d:"The Lighthouse of Alexandria guided ships with fire and a giant mirror that could be seen over 30 miles out at sea. Built by Greek engineers 2,300 years ago, it was one of the Seven Wonders of the ancient world."},
+ {n:'The Grand Aqueduct',v:VX[6],c:0xC9A876,d:"The Romans built stone bridges like this to carry fresh water across whole valleys, flowing gently downhill the entire way. Some were built so well they still carry water today, 2,000 years later."},
+ {n:'The Colosseum',v:VX[7],c:0xD9C49A,d:"Rome's giant arena held 50,000 fans who came to watch gladiators — and sometimes even pretend sea battles in a flooded arena. Its strong stone arches have kept it standing for almost 2,000 years."},
+ {n:'The Great Wall',v:VX[8],c:0x9B9488,d:"The longest thing humans have ever built: over 13,000 miles of walls and watchtowers winding across northern China. Guards sent messages along it with smoke signals by day and fires by night."},
+ {n:'The Great Pagoda',v:VX[9],c:0x9E4B3C,d:"Tower temples of Asia with stacked roofs that curve toward the sky. Many have survived earthquakes for more than 1,000 years, because their clever design lets them sway gently without falling."},
+ {n:'Angkor Wat',v:VX[10],c:0xA08D6E,d:"The largest temple on Earth, built 900 years ago in Cambodia and surrounded by a giant moat. Its five towers are shaped like lotus flower buds, and it is so loved it appears on Cambodia's flag."},
+ {n:'The Taj Mahal',v:VX[14],c:0xB3ACA0,d:"A gleaming white marble tomb in India, built about 400 years ago by an emperor for the wife he loved. It took 20,000 workers — with the help of 1,000 elephants — more than 20 years to finish."},
+ {n:'The Moai of Easter Island',v:VX[15],c:0x7E7A72,d:"The people of Rapa Nui, a tiny island far out in the Pacific Ocean, carved nearly 1,000 of these giant stone figures. The biggest weighs as much as 40 cars, and islanders may have rocked them side to side to 'walk' them into place."},
+ {n:'Machu Picchu',v:VX[16],c:0x8F9282,d:"A stone city built by the Inca on a mountain ridge in Peru, so high it often sits above the clouds. Its stones fit together so perfectly without any glue or mortar that even a knife blade cannot slip between them."},
+ {n:'Chichen Itza',v:VX[11],c:0xB0A896,d:"A stepped pyramid built by the Maya in Mexico about 1,100 years ago. Its four staircases have 91 steps each — add the platform on top and you get 365, one for every day of the year. The Maya loved numbers too!"},
+ {n:'The Templo Mayor',v:VX[12],c:0xAF7460,d:"The great twin temple of the Aztecs stood at the heart of Tenochtitlan, a city built on a lake — right where Mexico City is today. The Aztecs rebuilt it bigger and bigger six times."}
 ];
 S.monBlocks=Math.min(S.monBlocks,MONS[S.mon].v.length);
 let PA=null,monMode='home',R3=null,monAnim=null;
@@ -210,8 +329,11 @@ function showMon(mode){
  const bn=$('mon-banner');
  if(data.completed){
   bn.className='mon-banner';
-  bn.innerHTML='⭐ '+M.n+' is complete!'+(data.mi===MONS.length-1?' A golden age begins…':' Next: '+MONS[S.mon].n);
+  bn.innerHTML='⭐ '+M.n+' is complete!'+(data.mi===MONS.length-1?' A golden age begins…':' Next: '+MONS[S.mon].n)+'<br><span style="font-weight:400;font-size:13px">'+M.d+'</span>';
   setTimeout(snd.rank,nb*150+300);
+ }else if(mode==='museum'&&(S.gild>0||data.mi<S.mon)){
+  bn.className='mon-banner';
+  bn.innerHTML='<span style="font-weight:400;font-size:13px">'+M.d+'</span>';
  }else bn.className='hidden';
  $('btn-mon-go').textContent=mode==='play'?'Next order':'Back';
  show('mon');
@@ -234,7 +356,7 @@ function render3D(M,data){
  const dl=new THREE.DirectionalLight(0xfff2d0,0.8);dl.position.set(10,20,8);scene.add(dl);
  const group=new THREE.Group();scene.add(group);
  const geo=new THREE.BoxGeometry(0.95,0.95,0.95);
- const matOn=new THREE.MeshLambertMaterial({color:S.gild>0?0xF2C94C:0xD8B56A});
+ const matOn=new THREE.MeshLambertMaterial({color:S.gild>0?0xF2C94C:(M.c||0xD8B56A)});
  const matGhost=new THREE.MeshBasicMaterial({color:0xB09A66,transparent:true,opacity:0.15,wireframe:true});
  let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9,mnz=1e9,mxz=-1e9;
  M.v.forEach(v=>{mnx=Math.min(mnx,v[0]);mxx=Math.max(mxx,v[0]);mny=Math.min(mny,v[1]);mxy=Math.max(mxy,v[1]);mnz=Math.min(mnz,v[2]);mxz=Math.max(mxz,v[2]);});
@@ -289,7 +411,22 @@ function render3D(M,data){
  }
  requestAnimationFrame(loop);
 }
-function monDone(){if(monAnim)monAnim.stop=true;if(monMode==='play')newRound();else{show('home');renderHome();}}
+function monDone(){if(monAnim)monAnim.stop=true;if(monMode==='play')newRound();else if(monMode==='museum'){show('museum');renderMuseum();}else{show('home');renderHome();}}
+function renderMuseum(){
+ const done=i=>S.gild>0||i<S.mon;
+ $('mus-count').textContent=MONS.filter((m,i)=>done(i)).length+' / '+MONS.length+' ⭐';
+ $('mus-list').innerHTML=MONS.map((m,i)=>{
+  if(done(i))return '<div class="mus" onclick="viewMon('+i+')"><div class="t">⭐ '+m.n+(S.gild>0?' ✨':'')+'</div><div class="w">'+m.d+'</div><div class="w" style="color:#B98A2F">Tap to visit</div></div>';
+  if(i===S.mon)return '<div class="mus cur" onclick="viewMon('+i+')"><div class="t">\u{1F9F1} '+m.n+'</div><div class="w">Now building — '+S.monBlocks+' / '+m.v.length+' blocks. Fill orders to place more!</div><div class="bar"><i style="width:'+Math.round(100*S.monBlocks/m.v.length)+'%"></i></div></div>';
+  return '<div class="mus lock"><div class="t">\u{1F512} Wonder #'+(i+1)+'</div><div class="w">Keep building to discover this wonder.</div></div>';
+ }).join('');
+}
+function viewMon(i){
+ snd.tap();
+ const p=(S.gild>0||i<S.mon)?MONS[i].v.length:S.monBlocks;
+ PA={mi:i,prev:p,placed:p,completed:false};
+ showMon('museum');
+}
 function toMon(){hideOverlay();showMon('play');}
 let G=null,timerInt=null;
 
@@ -444,7 +581,7 @@ function nextRound(){hideOverlay();newRound();}
 function setOverlay(h){$('overlay').innerHTML=h;$('overlay').classList.remove('hidden');}
 function hideOverlay(){$('overlay').classList.add('hidden');$('overlay').innerHTML='';}
 
-function show(n){['home','game','mon','set'].forEach(x=>$('scr-'+x).classList.toggle('hidden',x!==n));}
+function show(n){['home','game','mon','set','museum'].forEach(x=>$('scr-'+x).classList.toggle('hidden',x!==n));}
 function renderHome(){
  $('h-day').textContent='Day '+S.round;
  $('h-coins').textContent=S.coins;
@@ -454,6 +591,8 @@ function renderHome(){
 
 $('btn-play').onclick=()=>{snd.tap();newRound();};
 $('btn-mon').onclick=()=>{snd.tap();showMon('home');};
+$('btn-museum').onclick=()=>{snd.tap();renderMuseum();show('museum');};
+$('btn-mus-back').onclick=()=>{snd.tap();show('home');renderHome();};
 $('btn-mon-go').onclick=()=>{snd.tap();monDone();};
 $('btn-mon-back').onclick=()=>{snd.tap();monDone();};
 $('btn-back').onclick=()=>{clearInterval(timerInt);hideOverlay();show('home');renderHome();};
@@ -472,14 +611,21 @@ $('vol').oninput=()=>{S.musicVol=$('vol').value/100;save();bg.volume=S.musicVol;
 $('btn-exit').onclick=()=>{
  bg.pause();
  window.close();
- setTimeout(()=>{setOverlay('<div class="ovl"><h2>Rest well, stonecutter</h2><p class="sub">You can close the app now. Your pyramid will be waiting.</p><button class="btn" onclick="hideOverlay();applyMusic()">Keep playing</button></div>');},250);
+ setTimeout(()=>{setOverlay('<div class="ovl"><h2>Rest well, stonecutter</h2><p class="sub">You can close the app now. Your monument will be waiting.</p><button class="btn" onclick="hideOverlay();applyMusic()">Keep playing</button></div>');},250);
 };
 $('btn-reset').onclick=()=>{if(confirm('Erase all progress?')){S={round:1,coins:0,sfx:S.sfx,music:S.music,musicVol:S.musicVol,mon:0,monBlocks:0,gild:0};save();show('home');renderHome();}};
 $('btn-how').onclick=()=>{
- setOverlay('<div class="ovl"><h2>How to play</h2><ol><li>A customer orders, like 13 baskets &times; 12 fish.</li><li>Carve stones. Each new stone doubles the last one &mdash; doubling is just adding a number to itself.</li><li>Tap stones so the baskets add up to exactly 13.</li><li>The fish on those stones add up to the answer.</li><li>Every order earns &#129521; blocks that build the wonders of Egypt.</li></ol><p class="sub" style="margin-top:10px">Every number can be built from doubles. Scribes in Egypt multiplied this way 4,000 years ago &mdash; and now you can too.</p><button class="btn" onclick="hideOverlay()">Got it</button></div>');
+ setOverlay('<div class="ovl"><h2>How to play</h2><ol><li>A customer orders, like 13 baskets &times; 12 fish.</li><li>Carve stones. Each new stone doubles the last one &mdash; doubling is just adding a number to itself.</li><li>Tap stones so the baskets add up to exactly 13.</li><li>The fish on those stones add up to the answer.</li><li>Rank up from Apprentice to Master &mdash; each rank puts more of the carving in your hands. Watch for royal orders against the setting sun!</li><li>Every order earns &#129521; blocks that build 17 wonders of the ancient world, from the Great Pyramid to the great temples of Mexico.</li><li>Finish a wonder to unlock its story in the &#127963;&#65039; Museum.</li></ol><p class="sub" style="margin-top:10px">Every number can be built from doubles. Scribes in Egypt multiplied this way 4,000 years ago &mdash; and now you can too.</p><button class="btn" onclick="hideOverlay()">Got it</button></div>');
 };
 
 renderHome();show('home');
+if(location.search.includes('tour')){
+ save=()=>{};
+ let ti=0;
+ const tourShow=()=>{S.mon=ti;S.monBlocks=MONS[ti].v.length;showMon('home');};
+ tourShow();
+ setInterval(()=>{ti=(ti+1)%MONS.length;tourShow();},5000);
+}
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
