@@ -7,6 +7,11 @@
 <title>Stonecutter</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Stonecutter">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
@@ -186,9 +191,9 @@ function tierFor(r){return r<=4?1:r<=10?2:r<=18?3:4;}
 
 const bg=new Audio('background.mp3');bg.loop=true;
 function applyMusic(){bg.volume=S.musicVol;if(S.music)bg.play().catch(()=>{});else bg.pause();}
-document.addEventListener('pointerdown',function f(){document.removeEventListener('pointerdown',f);applyMusic();});
 let AC=null;
-function tone(f,dur,type,vol,delay){if(!S.sfx)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const t=AC.currentTime+(delay||0);const o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.value=f;g.gain.setValueAtTime(vol||0.12,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+dur);}catch(e){}}
+document.addEventListener('pointerdown',function f(){document.removeEventListener('pointerdown',f);applyMusic();try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();}catch(e){}});
+function tone(f,dur,type,vol,delay){if(!S.sfx)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();const t=AC.currentTime+(delay||0);const o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.value=f;g.gain.setValueAtTime(vol||0.12,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+dur);}catch(e){}}
 const snd={
  tap:()=>tone(600,0.06,'square',0.05),
  sel:n=>tone(300+n*40,0.1,'sine',0.1),
